@@ -94,8 +94,8 @@ try:
     register_all_handlers(app)
 
     print("🚀 Starting bot now...")
-
-    print("🛑 Bot stopped")
+app.run()
+print("🛑 Bot stopped")  # هذا السطر سيتم تنفيذه عند إيقاف البوت
 
 except Exception as e:
     print("💥 BOT CRASHED:", e)
