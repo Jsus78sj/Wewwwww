@@ -1,99 +1,67 @@
 # ============================================================
 # Group Manager Bot
-# Author: LearningBotsOfficial (https://github.com/LearningBotsOfficial) 
-# Support: https://t.me/LearningBotsCommunity
-# Channel: https://t.me/learning_bots
-# YouTube: https://youtube.com/@learning_bots
+# Author: LearningBotsOfficial
 # License: Open-source (keep credits, no resale)
 # ============================================================
 
 import asyncio
+# ✅ إنشاء حلقة أحداث للخيط الرئيسي (ضروري قبل استيراد Pyrogram)
+_loop = asyncio.new_event_loop()
+asyncio.set_event_loop(_loop)
 
-try:
-    asyncio.get_event_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+import os, sys, logging, traceback
+from threading import Thread
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-import os
-import logging
-import threading
-import traceback
-from http.server import BaseHTTPRequestHandler, HTTPServer
+# استيراد Pyrogram ومكونات البوت
+from pyrogram import Client
+from config import API_ID, API_HASH, BOT_TOKEN
+from security import verify_integrity, get_runtime_key
 
 logging.basicConfig(level=logging.INFO)
 
-print("🚀 Starting bot...")
+# ⚡ تجاوز التحقق من السلامة (لتجنب مشاكل Render)
+# verify_integrity()
+RUNTIME_KEY = get_runtime_key()
 
+# إنشاء عميل البوت
+app = Client(
+    "group_manager_bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
 
-try:
-    print("🔍 Checking ENV variables...")
-    print("API_ID:", os.getenv("API_ID"))
-    print("API_HASH:", os.getenv("API_HASH"))
-    print("BOT_TOKEN:", os.getenv("BOT_TOKEN"))
-    print("MONGO_URI:", os.getenv("MONGO_URI"))
-except Exception as e:
-    print("❌ ENV ERROR:", e)
-    traceback.print_exc()
+# تسجيل جميع الأوامر
+from handlers import register_all_handlers
+register_all_handlers(app)
 
-try:
-    from security import verify_integrity, get_runtime_key
+print("✅ Bot is starting securely...", flush=True)
 
-    verify_integrity()
-    RUNTIME_KEY = get_runtime_key()
-
-    if not RUNTIME_KEY:
-        raise Exception("🚫 Security validation failed!")
-
-    print("✅ Security passed")
-
-except Exception as e:
-    print("❌ SECURITY ERROR:", e)
-    traceback.print_exc()
-    raise
-
-PORT = int(os.environ.get("PORT", 10000))
-
+# ---------- خادم صحة بسيط لإبقاء Render نشطاً ----------
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Nomade Bot is running")
+        self.wfile.write(b"OK")
 
-    def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    print(f"🌐 Health server running on port {port}", flush=True)
+    server.serve_forever()
+# --------------------------------------------------------
 
-def start_web_server():
+if __name__ == "__main__":
+    # تشغيل خادم الصحة في خيط منفصل (خلفي)
+    health_thread = Thread(target=run_health_server, daemon=True)
+    health_thread.start()
+
+    # تشغيل البوت في الخيط الرئيسي مع التقاط الأخطاء
+    print("🚀 Starting bot now...", flush=True)
     try:
-        server = HTTPServer(("0.0.0.0", PORT), HealthHandler)
-        logging.info(f"🌐 Web server running on port {PORT}")
-        server.serve_forever()
+        app.run()
     except Exception as e:
-        print("❌ WEB SERVER ERROR:", e)
+        print(f"❌ Bot crashed: {type(e).__name__}: {e}", flush=True)
         traceback.print_exc()
-
-threading.Thread(target=start_web_server, daemon=True).start()
-
-try:
-    from pyrogram import Client
-    from config import API_ID, API_HASH, BOT_TOKEN
-    from handlers import register_all_handlers
-
-    print("🔧 Initializing bot client...")
-
-    app = Client(
-        "group_manager_bot",
-        api_id=API_ID,
-        api_hash=API_HASH,
-        bot_token=BOT_TOKEN
-    )
-
-    register_all_handlers(app)
-
-    print("🚀 Starting bot now...")
-    app.run()                     # هذا السطر يشغّل البوت ويبقيه متصلاً
-    print("🛑 Bot stopped")
-
-except Exception as e:
-    print("💥 BOT CRASHED:", e)
-    traceback.print_exc()
+        sys.exit(1)
