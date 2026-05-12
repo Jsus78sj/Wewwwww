@@ -1,14 +1,11 @@
 # ============================================================
-#Group Manager Bot
+# Group Manager Bot
 # Author: LearningBotsOfficial (https://github.com/LearningBotsOfficial) 
 # Support: https://t.me/LearningBotsCommunity
 # Channel: https://t.me/learning_bots
 # YouTube: https://youtube.com/@learning_bots
 # License: Open-source (keep credits, no resale)
 # ============================================================
-
-
-
 
 import asyncio
 
@@ -94,8 +91,8 @@ try:
     register_all_handlers(app)
 
     print("🚀 Starting bot now...")
-app.run()
-print("🛑 Bot stopped")  # هذا السطر سيتم تنفيذه عند إيقاف البوت
+    app.run()                     # هذا السطر يشغّل البوت ويبقيه متصلاً
+    print("🛑 Bot stopped")
 
 except Exception as e:
     print("💥 BOT CRASHED:", e)
